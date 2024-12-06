@@ -1,101 +1,170 @@
-import Image from "next/image";
+import { getSession } from '@/utils/session';
+import { revalidatePath } from 'next/cache';
 
-export default function Home() {
+export type client = {
+  client_id?: number;
+  client_type: 'individual' | 'company';
+  status: string;
+  notes: string;
+  created_at?: string;
+  updated_at?: string;
+  individual?: {
+    full_name: string;
+    social_security_number: string;
+    date_of_birth: string;
+  };
+  company?: {
+    company_name: string;
+    tax_id_number: string;
+    incorporation_date: string;
+  };
+};
+
+export async function getClients() {
+  const session = await getSession();
+  const response = await fetch('https://api.mrrodz.com/clients', {
+    headers: {
+      Authorization: `Bearer ${session.token}`,
+    },
+  });
+  return response.json();
+}
+
+export async function addClientAction(formData: FormData) {
+  'use server';
+
+  const clientData: client = {
+    client_type: formData.get('client_type') as 'individual' | 'company',
+    status: formData.get('status') as string,
+    notes: formData.get('notes') as string,
+  };
+
+  if (formData.get('client_type') === 'individual') {
+    clientData.individual = {
+      full_name: formData.get('full_name') as string,
+      social_security_number: formData.get('social_security_number') as string,
+      date_of_birth: formData.get('date_of_birth') as string,
+    };
+  } else if (formData.get('client_type') === 'company') {
+    clientData.company = {
+      company_name: formData.get('company_name') as string,
+      tax_id_number: formData.get('tax_id_number') as string,
+      incorporation_date: formData.get('incorporation_date') as string,
+    };
+  }
+
+  const session = await getSession();
+  await fetch('https://api.mrrodz.com/clients', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.token}`,
+    },
+    body: JSON.stringify(clientData),
+  });
+  revalidatePath('/');
+}
+
+export async function DashboardPage() {
+  const clients = await getClients();
+  if (clients.message === 'Unauthorized') {
+    return <div>Unauthorized</div>;
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
+    <div className="m-4">
+      <h1 className="text-2xl font-bold mb-4 ">Clients</h1>
+      <ul className="space-y-2">
+        {clients.map((client: client) => (
+          <li key={client.client_id}>
+            <a href="" className="text-blue-600 underline">
+              {client.client_id} -{' '}
+              {client.client_type === 'individual' ? (
+                <>
+                  {client.individual?.full_name} -{' '}
+                  {client.individual?.social_security_number}
+                </>
+              ) : (
+                <>
+                  {client.company?.company_name} -{' '}
+                  {client.company?.tax_id_number}
+                </>
+              )}
+            </a>
           </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        ))}
+      </ul>
+      <form className="mt-4 space-y-2" action={addClientAction}>
+        <div>
+          <label className="block">Client Type</label>
+          <div className="flex space-x-4">
+            <label>
+              <input
+                type="radio"
+                name="client_type"
+                value="individual"
+                defaultChecked
+                className="mr-2"
+              />
+              Individual
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="client_type"
+                value="company"
+                className="mr-2"
+              />
+              Company
+            </label>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <div>
+          <label className="block">Full Name</label>
+          <input
+            type="text"
+            name="full_name"
+            defaultValue="Phillip J. Fry"
+            className="border p-2 w-full"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </div>
+        <div>
+          <label className="block">Social Security Number</label>
+          <input
+            type="text"
+            name="social_security_number"
+            defaultValue="987-65-4321"
+            className="border p-2 w-full"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+        </div>
+        <div>
+          <label className="block">Date of Birth</label>
+          <input
+            type="date"
+            name="date_of_birth"
+            defaultValue="1990-01-01"
+            className="border p-2 w-full"
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+        <div>
+          <input
+            type="hidden"
+            name="status"
+            defaultValue="active"
+            className="border p-2 w-full"
+          />
+        </div>
+        <div>
+          <label className="block">Notes</label>
+          <textarea
+            name="notes"
+            className="border p-2 w-full"
+            defaultValue="Some random notes about the client Phillip J. Fry"></textarea>
+        </div>
+        <button className="bg-green-500 text-white p-4 mt-2">Enviar</button>
+      </form>
     </div>
   );
 }
+
+export default DashboardPage;

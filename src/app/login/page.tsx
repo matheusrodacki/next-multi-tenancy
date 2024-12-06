@@ -1,4 +1,5 @@
 import { saveSession } from '@/utils/session';
+import { redirect } from 'next/navigation';
 
 export async function loginAction(formData: FormData) {
   'use server';
@@ -15,6 +16,7 @@ export async function loginAction(formData: FormData) {
   if (response.ok) {
     const { accessToken } = await response.json();
     await saveSession(accessToken);
+    redirect('/');
   } else {
     const responseText = await response.text();
     console.error('Failed to login', responseText);
@@ -31,7 +33,7 @@ export function LoginPage() {
       </div>
 
       <div>
-        <label htmlFor="password">Password</label>
+        <label className="block">Password</label>
         <input type="password" name="password" className="border p-2 w-full" />
       </div>
       <button className="bg-blue-500 text-white p-4 mt-2">Login</button>

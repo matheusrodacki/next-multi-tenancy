@@ -9,13 +9,13 @@ export type User = {
   permissions: string[];
 };
 
-const secreat = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6';
+const secret = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6';
 const ttl = 60 * 60 * 24 * 7; // 7 days
 
 export async function getSession() {
   const cookieStore = await cookies();
   return getIronSession<{ token: string }>(cookieStore, {
-    password: secreat,
+    password: secret,
     cookieName: 'auth',
     ttl,
     cookieOptions: {
